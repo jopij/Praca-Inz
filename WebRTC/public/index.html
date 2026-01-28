@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Video Chat</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-left">
+                <h1><i class="fas fa-video"></i> WebRTC Video Chat</h1>
+                <p>Rozmowy wideo z czatem • Kamera domyślnie wyłączona</p>
+            </div>
+            <div class="user-info">
+                <div>
+                    <div class="user-id" id="clientId">Ładowanie...</div>
+                    <div id="usernameDisplay">Użytkownik</div>
+                </div>
+                <div class="status-indicator" id="connectionStatus"></div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="video-panel">
+                <div class="video-container">
+                    <div class="video-box local-video">
+                        <div class="video-header">
+                            <div class="video-title">
+                                <i class="fas fa-user"></i> Twoja kamera
+                            </div>
+                            <div class="video-status">
+                                <span class="status-badge video-status-badge" id="videoStatusBadge">
+                                    <i class="fas fa-video-slash"></i> Wyłączona
+                                </span>
+                                <span class="status-badge audio-status-badge" id="audioStatusBadge">
+                                    <i class="fas fa-microphone-slash"></i> Wyłączony
+                                </span>
+                            </div>
+                        </div>
+                        <video id="localVideo" autoplay muted playsinline></video>
+                        <div class="video-placeholder" id="localVideoPlaceholder">
+                            <div class="placeholder-content">
+                                <i class="fas fa-video-slash"></i>
+                                <h3>Kamera wyłączona</h3>
+                                <p>Kliknij "Włącz kamerę" aby rozpocząć</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="video-box">
+                        <div class="video-header">
+                            <div class="video-title">
+                                <i class="fas fa-user-friends"></i> Rozmówca
+                            </div>
+                            <div class="video-status">
+                                <span class="status-badge" id="remoteStatusBadge">
+                                    <i class="fas fa-user-clock"></i> Oczekiwanie
+                                </span>
+                            </div>
+                        </div>
+                        <video id="remoteVideo" autoplay playsinline></video>
+                        <div class="video-placeholder" id="remoteVideoPlaceholder">
+                            <div class="placeholder-content">
+                                <i class="fas fa-user-clock"></i>
+                                <h3>Brak połączenia</h3>
+                                <p>Połącz się z innym użytkownikiem</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="controls-section">
+                    <div class="control-group">
+                        <h3><i class="fas fa-sliders-h"></i> Kontrola mediów</h3>
+                        <div class="button-group">
+                            <button id="startVideoBtn" class="btn btn-primary">
+                                <i class="fas fa-video"></i> Włącz kamerę
+                            </button>
+                            <button id="stopVideoBtn" class="btn btn-secondary" disabled>
+                                <i class="fas fa-stop"></i> Wyłącz kamerę
+                            </button>
+                            <button id="toggleAudioBtn" class="btn btn-outline">
+                                <i class="fas fa-microphone-slash"></i> Mikrofon
+                            </button>
+                            <button id="toggleRemoteAudioBtn" class="btn btn-outline" disabled>
+                                <i class="fas fa-volume-up"></i> Dźwięk
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <h3><i class="fas fa-phone"></i> Kontrola połączenia</h3>
+                        <div class="button-group">
+                            <button id="callBtn" class="btn btn-success" disabled>
+                                <i class="fas fa-phone"></i> Zadzwoń
+                            </button>
+                            <button id="hangupBtn" class="btn btn-danger" disabled>
+                                <i class="fas fa-phone-slash"></i> Rozłącz
+                            </button>
+                            <button id="refreshUsersBtn" class="btn btn-warning">
+                                <i class="fas fa-sync-alt"></i> Odśwież
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="connection-info">
+                    <h3><i class="fas fa-info-circle"></i> Informacje o połączeniu</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Stan ICE</div>
+                            <div class="info-value" id="iceState">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Stan sygnalizacji</div>
+                            <div class="info-value" id="signalingState">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">ID rozmowy</div>
+                            <div class="info-value" id="callIdDisplay">-</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-label">Połączony z</div>
+                            <div class="info-value" id="connectedTo">-</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Side Panel -->
+            <div class="side-panel">
+                <div class="panel-tabs">
+                    <button class="tab-btn active" data-tab="users">
+                        <i class="fas fa-users"></i> Użytkownicy
+                    </button>
+                    <button class="tab-btn" data-tab="chat">
+                        <i class="fas fa-comments"></i> Czat
+                    </button>
+                    <button class="tab-btn" data-tab="settings">
+                        <i class="fas fa-cog"></i> Ustawienia
+                    </button>
+                </div>
+                
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="users-tab">
+                        <div class="users-list-container">
+                            <div class="users-list-header">
+                                <h4>Dostępni użytkownicy</h4>
+                                <span class="user-count" id="userCount">0</span>
+                            </div>
+                            <div class="users-list" id="usersList">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane" id="chat-tab">
+                        <div class="chat-container">
+                            <div class="chat-header">
+                                <h4 id="chatWith">Czat</h4>
+                                <div class="chat-status" id="chatStatus">Nie jesteś w rozmowie</div>
+                            </div>
+                            <div class="chat-messages" id="chatMessages">
+                            </div>
+                            <div class="chat-input-container" id="chatInputContainer" style="display: none;">
+                                <input type="text" id="chatInput" placeholder="Napisz wiadomość..." maxlength="500">
+                                <button id="sendMessageBtn" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="tab-pane" id="settings-tab">
+                        <div class="settings-container">
+                            <div class="setting-group">
+                                <h4><i class="fas fa-user-edit"></i> Twoja nazwa</h4>
+                                <div class="setting-input-group">
+                                    <input type="text" id="usernameInput" placeholder="Wprowadź nazwę">
+                                    <button id="updateUsernameBtn" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Zapisz
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h4><i class="fas fa-bell"></i> Powiadomienia</h4>
+                                <div class="checkbox-group">
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="autoAnswerCalls" checked>
+                                        <span>Automatycznie odbieraj połączenia</span>
+                                    </label>
+                                    <label class="checkbox-label">
+                                        <input type="checkbox" id="enableSounds" checked>
+                                        <span>Dźwięki powiadomień</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="setting-group">
+                                <h4><i class="fas fa-tools"></i> Zaawansowane</h4>
+                                <div class="button-group">
+                                    <button id="clearLogBtn" class="btn btn-secondary">
+                                        <i class="fas fa-trash"></i> Wyczyść log
+                                    </button>
+                                    <button id="testConnectionBtn" class="btn btn-warning">
+                                        <i class="fas fa-network-wired"></i> Test połączenia
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Panel -->
+        <div class="log-panel" id="logPanel">
+            <div class="log-header">
+                <h4><i class="fas fa-terminal"></i> Logi systemowe</h4>
+                <button id="toggleLogBtn" class="btn btn-icon">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            <div class="log-content" id="logContent">
+                <div class="log-entry">
+                    <span class="log-time">[System]</span>
+                    <span class="log-info">Inicjalizacja aplikacji...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="incomingCallModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-phone-volume"></i> Przychodzące połączenie</h2>
+            </div>
+            <div class="modal-body">
+                <div class="caller-info">
+                    <div class="caller-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="caller-details">
+                        <h3 id="callerName">Użytkownik</h3>
+                        <p id="callerId">Ładowanie...</p>
+                    </div>
+                </div>
+                
+                <div class="call-status">
+                    <div class="status-item">
+                        <i class="fas fa-video"></i>
+                        <span id="callVideoStatus">Kamera: Wyłączona</span>
+                    </div>
+                    <div class="status-item">
+                        <i class="fas fa-microphone"></i>
+                        <span id="callAudioStatus">Mikrofon: Wyłączony</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="rejectCallBtn" class="btn btn-danger">
+                    <i class="fas fa-times"></i> Odrzuć
+                </button>
+                <button id="acceptCallBtn" class="btn btn-success">
+                    <i class="fas fa-phone"></i> Odbierz
+                </button>
+            </div>
+        </div>
+    </div>
+    
+
+<audio id="notificationSound" preload="auto" style="display: none;">
+</audio>
+    
+
+    <script src="webrtc.js"></script>
+    <script src="chat.js"></script>
+    <script src="ui.js"></script>
+    <script src="app-combined.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded - testing initialization');
+    try {
+        const testApp = new App();
+        console.log(' App constructor works');
+        testApp.initialize();
+        console.log(' App initialization started');
+    } catch (e) {
+        console.error(' Initialization error:', e);
+    }
+});
+</script>
+</body>
+</html>

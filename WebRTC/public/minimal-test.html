@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head><title>Minimal Test</title></head>
+<body>
+    <script src="webrtc-fixed.js"></script>
+    <script src="chat-fixed.js"></script>
+    <script src="ui-fixed.js"></script>
+    <script>
+        console.log('Testing classes...');
+        console.log('WebRTCManager:', typeof WebRTCManager);
+        console.log('ChatManager:', typeof ChatManager);
+        console.log('UIManager:', typeof UIManager);
+        
+        // Test creating instances
+        try {
+            const webrtc = new WebRTCManager();
+            const chat = new ChatManager();
+            const ui = new UIManager(webrtc, chat);
+            console.log('✅ All classes can be instantiated');
+        } catch (e) {
+            console.error('❌ Error:', e);
+        }
+    </script>
+</body>
+</html>
