@@ -21,7 +21,7 @@ class WebRTCManager {
         
         this.currentCallId = null;
         this.currentPeerId = null;
-        this.currentPeerUsername = 'Rozmówca';
+        this.currentPeerUsername = 'Rozmowca';
         
         this.ui = null;
         this.sendWsMessage = null;
@@ -33,13 +33,13 @@ class WebRTCManager {
     
     async startMedia() {
         try {
-            this.ui.log('Żądanie dostępu do kamery i mikrofonu...', 'info');
+            this.ui.log('Zadanie dostepu do kamery i mikrofonu...', 'info');
             
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    frameRate: { ideal: 30 }
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    frameRate: { ideal: 24 }
                 },
                 audio: {
                     echoCancellation: true,
@@ -64,13 +64,11 @@ class WebRTCManager {
             this.ui.updateMediaStatus(this.isVideoEnabled, this.isAudioEnabled);
             this.ui.enableMediaControls(true);
             
-            this.ui.log('Kamera i mikrofon gotowe (domyślnie wyłączone)', 'success');
-            this.ui.showNotification('Media gotowe. Kliknij aby włączyć.');
+            this.ui.log('Kamera i mikrofon gotowe (domyslnie wylaczone)', 'success');
             
             return true;
         } catch (error) {
-            this.ui.log(`Błąd dostępu do mediów: ${error.message}`, 'error');
-            this.ui.showNotification('Błąd dostępu do kamery/mikrofonu');
+            this.ui.log(`Blad dostepu do mediow: ${error.message}`, 'error');
             return false;
         }
     }
@@ -85,7 +83,7 @@ class WebRTCManager {
             this.isAudioEnabled = false;
             this.ui.updateMediaStatus(false, false);
             
-            this.ui.log('Kamera i mikrofon wyłączone', 'info');
+            this.ui.log('Kamera i mikrofon wylaczone', 'info');
         }
     }
     
@@ -97,7 +95,7 @@ class WebRTCManager {
             this.isVideoEnabled = enabled;
             videoTrack.enabled = enabled;
             this.ui.updateMediaStatus(enabled, this.isAudioEnabled);
-            this.ui.log(`Kamera ${enabled ? 'włączona' : 'wyłączona'}`, 'info');
+            this.ui.log(`Kamera ${enabled ? 'wlaczona' : 'wylaczona'}`, 'info');
         }
     }
     
@@ -109,7 +107,7 @@ class WebRTCManager {
             this.isAudioEnabled = enabled;
             audioTrack.enabled = enabled;
             this.ui.updateMediaStatus(this.isVideoEnabled, enabled);
-            this.ui.log(`Mikrofon ${enabled ? 'włączony' : 'wyłączony'}`, 'info');
+            this.ui.log(`Mikrofon ${enabled ? 'wlaczony' : 'wylaczony'}`, 'info');
         }
     }
     
@@ -122,47 +120,57 @@ class WebRTCManager {
             });
         }
         
-        this.ui.log(`Dźwięk rozmówcy ${enabled ? 'włączony' : 'wyłączony'}`, 'info');
+        this.ui.log(`Dzwiek rozmowcy ${enabled ? 'wlaczony' : 'wylaczony'}`, 'info');
     }
 
     async startCall(targetId, targetUsername, sendWsMessage) {
-    this.currentPeerId = targetId;
-    this.currentPeerUsername = targetUsername;
-    this.sendWsMessage = sendWsMessage;
-    
-    try {
-        this.peerConnection = this.createPeerConnection(targetId);
+        this.currentPeerId = targetId;
+        this.currentPeerUsername = targetUsername;
+        this.sendWsMessage = sendWsMessage;
         
-        const offer = await this.peerConnection.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true
-        });
-        
-        await this.peerConnection.setLocalDescription(offer);
-        
-        sendWsMessage('start-call', {
-            target: targetId,
-            videoEnabled: this.isVideoEnabled,
-            audioEnabled: this.isAudioEnabled
-        });
-        
-        sendWsMessage('offer', {
-            target: targetId,
-            sdp: offer.sdp,
-            callId: this.currentCallId 
-        });
-        
-        this.ui.updateConnectedTo(targetUsername);
-        this.ui.updateCallUI(true);
-        this.ui.log(`Rozpoczęto połączenie z ${targetUsername}`, 'success');
-        
-        return true;
-    } catch (error) {
-        this.ui.log(`Błąd rozpoczęcia połączenia: ${error.message}`, 'error');
-        this.endCall('call-failed');
-        return false;
+        try {
+            this.peerConnection = this.createPeerConnection(targetId);
+            
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(track => {
+                    this.peerConnection.addTrack(track, this.localStream);
+                });
+            }
+            
+            const offer = await this.peerConnection.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            });
+            
+            await this.peerConnection.setLocalDescription(offer);
+            
+            if (sendWsMessage) {
+                sendWsMessage('start-call', {
+                    target: targetId,
+                    videoEnabled: this.isVideoEnabled,
+                    audioEnabled: this.isAudioEnabled
+                });
+                
+                sendWsMessage('offer', {
+                    target: targetId,
+                    sdp: offer.sdp,
+                    callId: this.currentCallId,
+                    videoEnabled: this.isVideoEnabled,
+                    audioEnabled: this.isAudioEnabled
+                });
+            }
+            
+            this.ui.updateConnectedTo(targetUsername);
+            this.ui.updateCallUI(true);
+            this.ui.log(`Rozpoczeto polaczenie z ${targetUsername}`, 'success');
+            
+            return true;
+        } catch (error) {
+            this.ui.log(`Blad rozpoczecia polaczenia: ${error.message}`, 'error');
+            this.endCall('call-failed');
+            return false;
+        }
     }
-}
     
     createPeerConnection(targetId) {
         const pc = new RTCPeerConnection(this.config);
@@ -172,11 +180,10 @@ class WebRTCManager {
             this.ui.updateIceState(state);
             
             if (state === 'connected' || state === 'completed') {
-                this.ui.log('Połączenie P2P nawiązane!', 'success');
-                this.ui.showNotification('Połączenie P2P nawiązane');
+                this.ui.log('Polaczenie P2P nawiazane!', 'success');
                 this.ui.showRemoteVideo();
             } else if (state === 'disconnected' || state === 'failed') {
-                this.ui.log(`Połączenie P2P ${state}`, 'error');
+                this.ui.log(`Polaczenie P2P ${state}`, 'error');
                 if (state === 'failed') {
                     this.endCall('ice-failed');
                 }
@@ -184,7 +191,7 @@ class WebRTCManager {
         };
         
         pc.onicecandidate = (event) => {
-            if (event.candidate && this.sendWsMessage && this.currentCallId) {
+            if (event.candidate && this.sendWsMessage) {
                 this.sendWsMessage('ice-candidate', {
                     target: targetId,
                     candidate: event.candidate,
@@ -198,75 +205,59 @@ class WebRTCManager {
         };
         
         pc.ontrack = (event) => {
-            this.ui.log('Otrzymano zdalny strumień multimedialny', 'success');
-            this.remoteStream = event.streams[0];
+            this.ui.log('Otrzymano zdalny strumien multimedialny', 'success');
+            
+            if (!this.remoteStream) {
+                this.remoteStream = new MediaStream();
+            }
+            this.remoteStream.addTrack(event.track);
+            
             this.ui.setRemoteVideoStream(this.remoteStream);
             this.ui.enableRemoteAudioControl(true);
             
             this.toggleRemoteAudio(true);
         };
         
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
-            });
-        }
-        
-        this.dataChannel = pc.createDataChannel('chat');
-        this.setupDataChannel();
-        
         return pc;
     }
     
-    setupDataChannel() {
-        if (!this.dataChannel) return;
-        
-        this.dataChannel.onopen = () => {
-            this.ui.log('Kanał danych otwarty', 'success');
-        };
-        
-        this.dataChannel.onmessage = (event) => {
-            this.ui.log(`Wiadomość danych: ${event.data}`, 'info');
-        };
-        
-        this.dataChannel.onclose = () => {
-            this.ui.log('Kanał danych zamknięty', 'info');
-        };
-    }
-    
     async handleIncomingOffer(data) {
-    try {
-        // callId powinien przyjść z serwera w incoming-call
-        // Jeśli nie ma, użyj tymczasowego
-        this.currentCallId = data.callId || `temp_${data.sender}`;
-        this.currentPeerId = data.sender;
-        this.currentPeerUsername = data.senderUsername || 'Rozmówca';
-        
-        this.peerConnection = this.createPeerConnection(data.sender);
-        
-        await this.peerConnection.setRemoteDescription(
-            new RTCSessionDescription({ type: 'offer', sdp: data.sdp })
-        );
-        
-        const answer = await this.peerConnection.createAnswer();
-        await this.peerConnection.setLocalDescription(answer);
-        
-        if (this.sendWsMessage) {
-            this.sendWsMessage('answer', {
-                target: data.sender,
-                sdp: answer.sdp,
-                callId: this.currentCallId
-            });
-        }
-        
-        this.ui.updateCallId(this.currentCallId);
-        this.ui.updateConnectedTo(this.currentPeerUsername);
-        this.ui.updateCallUI(true);
-        this.ui.log(`Odebrano ofertę od ${this.currentPeerUsername}`, 'success');
-        
-        return true;
+        try {
+            this.currentCallId = data.callId || `temp_${data.sender}`;
+            this.currentPeerId = data.sender;
+            this.currentPeerUsername = data.senderUsername || 'Rozmowca';
+            
+            this.peerConnection = this.createPeerConnection(data.sender);
+            
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(track => {
+                    this.peerConnection.addTrack(track, this.localStream);
+                });
+            }
+            
+            await this.peerConnection.setRemoteDescription(
+                new RTCSessionDescription({ type: 'offer', sdp: data.sdp })
+            );
+            
+            const answer = await this.peerConnection.createAnswer();
+            await this.peerConnection.setLocalDescription(answer);
+            
+            if (this.sendWsMessage) {
+                this.sendWsMessage('answer', {
+                    target: data.sender,
+                    sdp: answer.sdp,
+                    callId: this.currentCallId
+                });
+            }
+            
+            this.ui.updateCallId(this.currentCallId);
+            this.ui.updateConnectedTo(this.currentPeerUsername);
+            this.ui.updateCallUI(true);
+            this.ui.log(`Odebrano oferte od ${this.currentPeerUsername}`, 'success');
+            
+            return true;
         } catch (error) {
-            this.ui.log(`Błąd obsługi oferty: ${error.message}`, 'error');
+            this.ui.log(`Blad obslugi oferty: ${error.message}`, 'error');
             this.endCall('offer-failed');
             return false;
         }
@@ -280,9 +271,9 @@ class WebRTCManager {
                 new RTCSessionDescription({ type: 'answer', sdp: data.sdp })
             );
             
-            this.ui.log('Otrzymano odpowiedź od rozmówcy', 'success');
+            this.ui.log('Otrzymano odpowiedz od rozmowcy', 'success');
         } catch (error) {
-            this.ui.log(`Błąd ustawiania odpowiedzi: ${error.message}`, 'error');
+            this.ui.log(`Blad ustawiania odpowiedzi: ${error.message}`, 'error');
         }
     }
     
@@ -293,9 +284,8 @@ class WebRTCManager {
             await this.peerConnection.addIceCandidate(
                 new RTCIceCandidate(data.candidate)
             );
-            this.ui.log('Dodano kandydata ICE', 'info');
         } catch (error) {
-            this.ui.log(`Błąd dodawania kandydata ICE: ${error.message}`, 'error');
+            this.ui.log(`Blad dodawania kandydata ICE: ${error.message}`, 'error');
         }
     }
     
@@ -306,13 +296,11 @@ class WebRTCManager {
     }
     
     handleCallAccepted(data) {
-        this.ui.log(`${data.receiverUsername} odebrał połączenie`, 'success');
-        this.ui.showNotification(`${data.receiverUsername} odebrał połączenie`);
+        this.ui.log(`${data.receiverUsername} odebrano polaczenie`, 'success');
     }
     
     handleCallRejected(data) {
-        this.ui.log(`${data.receiverUsername} odrzucił połączenie`, 'warning');
-        this.ui.showNotification(`${data.receiverUsername} odrzucił połączenie`);
+        this.ui.log(`${data.receiverUsername} odrzucono polaczenie`, 'warning');
         this.endCall('rejected');
     }
     
@@ -325,16 +313,14 @@ class WebRTCManager {
         this.ui.updateConnectedTo(data.callerUsername);
         this.ui.updateCallUI(true);
         
-        this.ui.log(`Rozpoczęto rozmowę z ${data.callerUsername}`, 'success');
+        this.ui.log(`Rozpoczeto rozmowe z ${data.callerUsername}`, 'success');
     }
     
     handleCallEnded(data) {
-        this.ui.log(`Rozmowa zakończona: ${data.reason}`, 'warning');
+        this.ui.log(`Rozmowa zakonczona: ${data.reason}`, 'warning');
         
         if (data.endedByUsername) {
-            this.ui.showNotification(`${data.endedByUsername} zakończył rozmowę`);
-        } else {
-            this.ui.showNotification('Rozmowa zakończona');
+            this.ui.showNotification(`${data.endedByUsername} zakonczyl rozmowe`);
         }
         
         this.endCall(data.reason);
@@ -379,13 +365,13 @@ class WebRTCManager {
         
         this.currentCallId = null;
         this.currentPeerId = null;
-        this.currentPeerUsername = 'Rozmówca';
+        this.currentPeerUsername = 'Rozmowca';
         
         this.ui.updateCallUI(false);
         this.ui.resetConnectionInfo();
         this.ui.enableRemoteAudioControl(false);
         
-        this.ui.log(`Połączenie zakończone: ${reason}`, 'info');
+        this.ui.log(`Polaczenie zakonczone: ${reason}`, 'info');
     }
     
     cleanup() {

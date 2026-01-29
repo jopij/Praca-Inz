@@ -6,7 +6,7 @@ const chatManager = require('./chatManager');
 class SignalingServer {
     constructor(wss) {
         this.wss = wss;
-        this.clients = new Map(); 
+        this.clients = new Map();
         this.callManager = callManager;
         this.chatManager = chatManager;
         
@@ -17,8 +17,6 @@ class SignalingServer {
         this.wss.on('connection', (ws, req) => {
             const clientId = uuidv4();
             const ip = req.socket.remoteAddress;
-            
-            console.log(` New connection: ${clientId} from ${ip}`);
             
             const username = this.generateUniqueUsername();
             
@@ -58,15 +56,13 @@ class SignalingServer {
             
             ws.on('close', () => this.handleDisconnect(ws));
             
-            ws.on('error', (error) => {
-                console.error(` Error for ${clientId}:`, error);
-            });
+            ws.on('error', (error) => {});
         });
     }
     
     generateUniqueUsername() {
-        const adjectives = ['Bystry', 'Szybki', 'Cichy', 'Wesoły', 'Mądry', 'Dzielny', 'Sprytny', 'Szczęśliwy'];
-        const nouns = ['Tygrys', 'Orzeł', 'Delfin', 'Feniks', 'Wilk', 'Jastrząb', 'Lew', 'Niedźwiedź'];
+        const adjectives = ['Bystry', 'Szybki', 'Cichy', 'Wesoly', 'Madry', 'Dzielny', 'Sprytny', 'Szczesliwy'];
+        const nouns = ['Tygrys', 'Orzel', 'Delfin', 'Feniks', 'Wilk', 'Jastrzab', 'Lew', 'Niedzwiedz'];
         const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
         const noun = nouns[Math.floor(Math.random() * nouns.length)];
         const number = Math.floor(Math.random() * 100);
@@ -89,8 +85,6 @@ class SignalingServer {
             const clientData = this.clients.get(ws);
             
             if (!clientData) return;
-            
-            console.log(` ${clientData.username}: ${data.type}`, data.target ? `→ ${data.target}` : '');
             
             data.sender = clientData.id;
             data.senderUsername = clientData.username;
@@ -146,10 +140,8 @@ class SignalingServer {
                     break;
                     
                 default:
-                    console.log(`Unknown message type: ${data.type}`);
             }
         } catch (error) {
-            console.error(' Parse error:', error);
             this.sendError(ws, 'Invalid message format');
         }
     }
@@ -240,8 +232,6 @@ class SignalingServer {
     handleDisconnect(ws) {
         const clientData = this.clients.get(ws);
         if (!clientData) return;
-        
-        console.log(`🔌 Disconnected: ${clientData.username}`);
         
         if (clientData.isInCall && clientData.callId) {
             this.callManager.handleUserDisconnected(clientData.id, clientData.callId, this);

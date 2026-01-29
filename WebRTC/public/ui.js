@@ -1,20 +1,17 @@
 class UIManager {
     constructor(webrtc, chat) {
-        console.log(' UIManager created');
-        
         this.webrtc = webrtc;
         this.chat = chat;
-        this.app = null; 
+        this.app = null;
         
         this.clientId = null;
-        this.username = 'Użytkownik';
+        this.username = 'Uzytkownik';
         
         this.elements = {};
     }
     
     initialize(app) {
-        console.log(' UIManager.initialize() called');
-        this.app = app; 
+        this.app = app;
         this.initializeElements();
         this.setupEventListeners();
         this.initializeTabs();
@@ -24,7 +21,6 @@ class UIManager {
     }
     
     initializeElements() {
-        console.log(' Initializing UI elements');
         this.elements.clientId = document.getElementById('clientId');
         this.elements.usernameDisplay = document.getElementById('usernameDisplay');
         this.elements.connectionStatus = document.getElementById('connectionStatus');
@@ -37,11 +33,9 @@ class UIManager {
         this.elements.audioStatusBadge = document.getElementById('audioStatusBadge');
         this.elements.remoteStatusBadge = document.getElementById('remoteStatusBadge');
         
-        this.elements.startVideoBtn = document.getElementById('startVideoBtn');
-        this.elements.stopVideoBtn = document.getElementById('stopVideoBtn');
+        this.elements.toggleVideoBtn = document.getElementById('toggleVideoBtn');
         this.elements.toggleAudioBtn = document.getElementById('toggleAudioBtn');
         this.elements.toggleRemoteAudioBtn = document.getElementById('toggleRemoteAudioBtn');
-        this.elements.callBtn = document.getElementById('callBtn');
         this.elements.hangupBtn = document.getElementById('hangupBtn');
         this.elements.refreshUsersBtn = document.getElementById('refreshUsersBtn');
         
@@ -62,7 +56,6 @@ class UIManager {
         
         this.elements.usernameInput = document.getElementById('usernameInput');
         this.elements.updateUsernameBtn = document.getElementById('updateUsernameBtn');
-        this.elements.autoAnswerCalls = document.getElementById('autoAnswerCalls');
         this.elements.enableSounds = document.getElementById('enableSounds');
         this.elements.clearLogBtn = document.getElementById('clearLogBtn');
         this.elements.testConnectionBtn = document.getElementById('testConnectionBtn');
@@ -81,33 +74,26 @@ class UIManager {
         
         this.elements.notificationSound = document.getElementById('notificationSound');
         
-        // Dodane do przechowywania tymczasowych danych
         this.elements.currentCallId = null;
         this.elements.currentCallerId = null;
+        this.elements.currentCallerUsername = null;
     }
     
     setupEventListeners() {
-        this.elements.startVideoBtn.addEventListener('click', () => {
+        this.elements.toggleVideoBtn.addEventListener('click', () => {
             if (!this.webrtc.localStream) {
                 this.webrtc.startMedia().then(success => {
                     if (success) {
-                        this.elements.startVideoBtn.disabled = true;
-                        this.elements.stopVideoBtn.disabled = false;
-                        this.elements.callBtn.disabled = false;
+                        this.webrtc.toggleVideo(true);
+                        this.updateVideoBtnText(true);
                         this.elements.toggleAudioBtn.disabled = false;
                     }
                 });
             } else {
-                this.webrtc.toggleVideo(true);
-                this.elements.startVideoBtn.disabled = true;
-                this.elements.stopVideoBtn.disabled = false;
+                const enabled = !this.webrtc.isVideoEnabled;
+                this.webrtc.toggleVideo(enabled);
+                this.updateVideoBtnText(enabled);
             }
-        });
-        
-        this.elements.stopVideoBtn.addEventListener('click', () => {
-            this.webrtc.toggleVideo(false);
-            this.elements.startVideoBtn.disabled = false;
-            this.elements.stopVideoBtn.disabled = true;
         });
         
         this.elements.toggleAudioBtn.addEventListener('click', () => {
@@ -120,15 +106,6 @@ class UIManager {
             const enabled = !this.webrtc.isRemoteAudioEnabled;
             this.webrtc.toggleRemoteAudio(enabled);
             this.updateRemoteAudioBtnText(enabled);
-        });
-        
-        this.elements.callBtn.addEventListener('click', () => {
-            const selectedUser = this.getSelectedUser();
-            if (selectedUser) {
-                this.app.startCall(selectedUser.id, selectedUser.username);
-            } else {
-                this.showNotification('Wybierz użytkownika z listy');
-            }
         });
         
         this.elements.hangupBtn.addEventListener('click', () => {
@@ -220,7 +197,7 @@ class UIManager {
     setConnectionStatus(connected) {
         const indicator = this.elements.connectionStatus;
         indicator.classList.toggle('connected', connected);
-        indicator.title = connected ? 'Połączony' : 'Rozłączony';
+        indicator.title = connected ? 'Polaczony' : 'Rozlaczony';
     }
     
     setLocalVideoStream(stream) {
@@ -241,49 +218,49 @@ class UIManager {
         this.updateVideoStatus(videoEnabled);
         this.updateAudioStatus(audioEnabled);
         
-        // Aktualizuj przyciski
-        if (videoEnabled) {
-            this.elements.startVideoBtn.disabled = true;
-            this.elements.stopVideoBtn.disabled = false;
-        } else {
-            this.elements.startVideoBtn.disabled = false;
-            this.elements.stopVideoBtn.disabled = true;
-        }
-        
+        this.updateVideoBtnText(videoEnabled);
         this.updateAudioBtnText(audioEnabled);
     }
     
     updateVideoStatus(enabled) {
         const badge = this.elements.videoStatusBadge;
         badge.innerHTML = enabled ? 
-            '<i class="fas fa-video"></i> Włączona' : 
-            '<i class="fas fa-video-slash"></i> Wyłączona';
+            '<i class="fas fa-video"></i> Wlaczona' : 
+            '<i class="fas fa-video-slash"></i> Wylaczona';
         badge.classList.toggle('active', enabled);
     }
     
     updateAudioStatus(enabled) {
         const badge = this.elements.audioStatusBadge;
         badge.innerHTML = enabled ? 
-            '<i class="fas fa-microphone"></i> Włączony' : 
-            '<i class="fas fa-microphone-slash"></i> Wyłączony';
+            '<i class="fas fa-microphone"></i> Wlaczony' : 
+            '<i class="fas fa-microphone-slash"></i> Wylaczony';
         badge.classList.toggle('active', enabled);
+    }
+    
+    updateVideoBtnText(enabled) {
+        this.elements.toggleVideoBtn.innerHTML = enabled ? 
+            '<i class="fas fa-video-slash"></i> Wylacz kamere' : 
+            '<i class="fas fa-video"></i> Wlacz kamere';
     }
     
     updateAudioBtnText(enabled) {
         this.elements.toggleAudioBtn.innerHTML = enabled ? 
-            '<i class="fas fa-microphone-slash"></i> Wyłącz mikrofon' : 
-            '<i class="fas fa-microphone"></i> Włącz mikrofon';
+            '<i class="fas fa-microphone-slash"></i> Wylacz mikrofon' : 
+            '<i class="fas fa-microphone"></i> Wlacz mikrofon';
     }
     
     updateRemoteAudioBtnText(enabled) {
         this.elements.toggleRemoteAudioBtn.innerHTML = enabled ? 
-            '<i class="fas fa-volume-mute"></i> Wyłącz dźwięk' : 
-            '<i class="fas fa-volume-up"></i> Włącz dźwięk';
+            '<i class="fas fa-volume-mute"></i> Wylacz dzwiek' : 
+            '<i class="fas fa-volume-up"></i> Wlacz dzwiek';
     }
     
     enableMediaControls(enabled) {
         this.elements.toggleAudioBtn.disabled = !enabled;
+        this.elements.toggleVideoBtn.disabled = !enabled;
         this.updateAudioBtnText(this.webrtc.isAudioEnabled);
+        this.updateVideoBtnText(this.webrtc.isVideoEnabled);
     }
     
     enableRemoteAudioControl(enabled) {
@@ -298,12 +275,11 @@ class UIManager {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-users"></i>
-                    <h4>Brak innych użytkowników</h4>
-                    <p>Otwórz kolejną zakładkę/przeglądarkę</p>
+                    <h4>Brak innych uzytkownikow</h4>
+                    <p>Otworz kolejna zakladke/przegladarke</p>
                 </div>
             `;
             this.elements.userCount.textContent = '0';
-            this.elements.callBtn.disabled = true;
             return;
         }
         
@@ -316,7 +292,7 @@ class UIManager {
                         <div class="user-name">${user.username}</div>
                         <div class="user-status">
                             <span class="status-dot ${user.isInCall ? 'in-call' : 'available'}"></span>
-                            ${user.isInCall ? 'W rozmowie' : 'Dostępny'}
+                            ${user.isInCall ? 'W rozmowie' : 'Dostepny'}
                         </div>
                     </div>
                     ${!user.isInCall ? `
@@ -340,34 +316,10 @@ class UIManager {
                 this.app.startCall(userId, userName);
             });
         });
-        
-        container.querySelectorAll('.user-item:not(.in-call)').forEach(item => {
-            item.addEventListener('click', () => {
-                container.querySelectorAll('.user-item').forEach(i => {
-                    i.classList.remove('selected');
-                });
-                
-                item.classList.add('selected');
-                
-                this.elements.callBtn.disabled = false;
-            });
-        });
-
-        this.elements.callBtn.disabled = this.webrtc.localStream ? false : true;
-    }
-    
-    getSelectedUser() {
-        const selectedItem = this.elements.usersList.querySelector('.user-item.selected');
-        if (selectedItem) {
-            const userId = selectedItem.getAttribute('data-user-id');
-            const userName = selectedItem.querySelector('.user-name').textContent;
-            return { id: userId, username: userName };
-        }
-        return null;
     }
     
     addUserToList(userData) {
-        this.log(`Nowy użytkownik: ${userData.username}`, 'info');
+        this.log(`Nowy uzytkownik: ${userData.username}`, 'info');
         this.app.refreshUsersList();
     }
     
@@ -399,7 +351,7 @@ class UIManager {
     
     disableChat() {
         this.elements.chatWith.textContent = 'Czat';
-        this.elements.chatStatus.textContent = 'Nie jesteś w rozmowie';
+        this.elements.chatStatus.textContent = 'Nie jestes w rozmowie';
         this.elements.chatInputContainer.style.display = 'none';
         this.clearChatMessages();
     }
@@ -426,8 +378,8 @@ class UIManager {
         this.elements.chatMessages.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-comments"></i>
-                <h4>Rozpocznij rozmowę</h4>
-                <p>Wiadomości czatu są tymczasowe</p>
+                <h4>Rozpocznij rozmowe</h4>
+                <p>Wiadomosci czatu sa tymczasowe</p>
             </div>
         `;
     }
@@ -467,11 +419,10 @@ class UIManager {
     
     updateCallUI(inCall) {
         this.elements.hangupBtn.disabled = !inCall;
-        this.elements.callBtn.disabled = inCall || !this.webrtc.localStream;
         this.elements.toggleRemoteAudioBtn.disabled = !inCall;
         
         if (inCall) {
-            this.elements.remoteStatusBadge.innerHTML = '<i class="fas fa-user-check"></i> Połączony';
+            this.elements.remoteStatusBadge.innerHTML = '<i class="fas fa-user-check"></i> Polaczony';
             this.elements.remoteStatusBadge.classList.add('active');
         } else {
             this.elements.remoteStatusBadge.innerHTML = '<i class="fas fa-user-clock"></i> Oczekiwanie';
@@ -480,47 +431,50 @@ class UIManager {
     }
     
     updatePeerVideoStatus(data) {
-        this.log(`${data.enabled ? 'Rozmówca włączył' : 'Rozmówca wyłączył'} kamerę`, 'info');
+        this.log(`${data.enabled ? 'Rozmowca wlaczyl' : 'Rozmowca wylaczyl'} kamere`, 'info');
     }
     
     updatePeerAudioStatus(data) {
-        this.log(`${data.enabled ? 'Rozmówca włączył' : 'Rozmówca wyłączył'} mikrofon`, 'info');
+        this.log(`${data.enabled ? 'Rozmowca wlaczyl' : 'Rozmowca wylaczyl'} mikrofon`, 'info');
     }
     
     showIncomingCallModal(callData) {
         this.elements.callerName.textContent = callData.callerUsername;
         this.elements.callerId.textContent = `ID: ${callData.callerId.substring(0, 12)}...`;
-        this.elements.callVideoStatus.textContent = `Kamera: ${callData.videoEnabled ? 'Włączona' : 'Wyłączona'}`;
-        this.elements.callAudioStatus.textContent = `Mikrofon: ${callData.audioEnabled ? 'Włączony' : 'Wyłączony'}`;
+        this.elements.callVideoStatus.textContent = `Kamera: ${callData.videoEnabled ? 'Wlaczona' : 'Wylaczona'}`;
+        this.elements.callAudioStatus.textContent = `Mikrofon: ${callData.audioEnabled ? 'Wlaczony' : 'Wylaczony'}`;
         
-        // ZAPISZ callId DO PÓŹNIEJSZEGO UŻYCIA
         this.elements.currentCallId = callData.callId;
         this.elements.currentCallerId = callData.callerId;
+        this.elements.currentCallerUsername = callData.callerUsername;
         
         this.elements.incomingCallModal.style.display = 'flex';
         
         if (this.elements.enableSounds.checked) {
             this.elements.notificationSound.currentTime = 0;
-            this.elements.notificationSound.play().catch(() => {
-            });
-        }
-        
-        if (this.elements.autoAnswerCalls.checked) {
-            setTimeout(() => {
-                this.acceptIncomingCall();
-            }, 2000);
+            this.elements.notificationSound.play().catch(() => {});
         }
     }
     
     hideIncomingCallModal() {
         this.elements.incomingCallModal.style.display = 'none';
+        
+        this.elements.currentCallId = null;
+        this.elements.currentCallerId = null;
+        this.elements.currentCallerUsername = null;
     }
     
     acceptIncomingCall() {
+        if (!this.elements.currentCallId || !this.elements.currentCallerId) {
+            this.log('Blad: Brak danych polaczenia', 'error');
+            this.hideIncomingCallModal();
+            return;
+        }
+        
         const callData = {
             callId: this.elements.currentCallId,
             callerId: this.elements.currentCallerId,
-            callerUsername: this.elements.callerName.textContent
+            callerUsername: this.elements.currentCallerUsername || this.elements.callerName.textContent
         };
         
         this.app.acceptCall(callData);
@@ -528,10 +482,15 @@ class UIManager {
     }
     
     rejectIncomingCall() {
+        if (!this.elements.currentCallId) {
+            this.hideIncomingCallModal();
+            return;
+        }
+        
         const callData = {
             callId: this.elements.currentCallId,
             callerId: this.elements.currentCallerId,
-            callerUsername: this.elements.callerName.textContent
+            callerUsername: this.elements.currentCallerUsername || this.elements.callerName.textContent
         };
         
         this.app.rejectCall(callData);
@@ -626,11 +585,11 @@ class UIManager {
     
     testConnection() {
         if (navigator.onLine) {
-            this.showNotification('Połączenie internetowe: OK');
-            this.log('Test połączenia: OK', 'success');
+            this.showNotification('Polaczenie internetowe: OK');
+            this.log('Test polaczenia: OK', 'success');
         } else {
-            this.showNotification('Brak połączenia internetowego');
-            this.log('Test połączenia: FAILED', 'error');
+            this.showNotification('Brak polaczenia internetowego');
+            this.log('Test polaczenia: FAILED', 'error');
         }
     }
     

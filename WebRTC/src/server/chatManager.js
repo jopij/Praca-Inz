@@ -1,6 +1,6 @@
 class ChatManager {
     constructor() {
-        this.chatMessages = new Map(); // callId -> messages[]
+        this.chatMessages = new Map();
     }
     
     handleChatMessage(ws, clientData, data, signalingServer) {
@@ -25,10 +25,12 @@ class ChatManager {
         }
         this.chatMessages.get(callId).push(chatMessage);
         
-        const clients = signalingServer.getAllClients();
-        clients.forEach(participant => {
-            if (participant.callId === callId && participant.id !== clientData.id) {
-                signalingServer.sendToClientById(participant.id, {
+        const call = signalingServer.callManager.getCall(callId);
+        if (!call) return;
+        
+        call.participants.forEach(participantId => {
+            if (participantId !== clientData.id) {
+                signalingServer.sendToClientById(participantId, {
                     type: 'chat-message',
                     callId: callId,
                     message: chatMessage,
@@ -44,7 +46,7 @@ class ChatManager {
             timestamp: new Date().toISOString()
         });
         
-        console.log(`💬 Call ${callId}: ${clientData.username}: ${data.message.substring(0, 50)}...`);
+        console.log(`Call ${callId}: ${clientData.username}: ${data.message.substring(0, 50)}...`);
     }
     
     handleGetChatHistory(ws, clientData, data, signalingServer) {

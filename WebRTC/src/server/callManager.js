@@ -28,7 +28,6 @@ class CallManager {
             return;
         }
         
-        // SERWER GENERUJE callId
         const callId = this.generateCallId();
         
         this.activeCalls.set(callId, {
@@ -58,7 +57,7 @@ class CallManager {
             timestamp: new Date().toISOString()
         });
         
-        console.log(` Call ${callId}: ${callerData.username} → ${targetClient.username}`);
+        return callId;
     }
     
     handleAcceptCall(ws, receiverData, data, signalingServer) {
@@ -81,7 +80,6 @@ class CallManager {
         receiverData.isInCall = true;
         receiverData.callId = callId;
         
-
         call.status = 'active';
         call.startedAt = new Date().toISOString();
         
@@ -101,17 +99,15 @@ class CallManager {
             timestamp: new Date().toISOString()
         });
         
-        signalingServer.broadcast({
-            type: 'users-in-call',
-            users: [
-                { id: callerId, username: callerClient.username },
-                { id: receiverData.id, username: receiverData.username }
-            ],
+        signalingServer.sendToClientById(callerId, {
+            type: 'call-started',
             callId: callId,
+            callerId: callerId,
+            callerUsername: callerClient.username,
             timestamp: new Date().toISOString()
         });
         
-        console.log(` Call ${callId}: ${receiverData.username} accepted the call`);
+        return callId;
     }
     
     handleRejectCall(ws, receiverData, data, signalingServer) {
@@ -138,8 +134,6 @@ class CallManager {
             reason: data.reason || 'User rejected the call',
             timestamp: new Date().toISOString()
         });
-        
-        console.log(`📞 Call ${callId}: ${receiverData.username} rejected the call`);
     }
     
     handleEndCall(ws, clientData, data, signalingServer) {
@@ -179,16 +173,7 @@ class CallManager {
             timestamp: new Date().toISOString()
         });
         
-        signalingServer.broadcast({
-            type: 'users-available',
-            users: call.participants.map(id => {
-                const user = signalingServer.getClientById(id);
-                return user ? { id: user.id, username: user.username } : null;
-            }).filter(u => u !== null),
-            timestamp: new Date().toISOString()
-        });
-        
-        console.log(`📞 Call ${callId}: Ended by ${clientData.username}`);
+        return callId;
     }
     
     handleUserDisconnected(userId, callId, signalingServer) {
@@ -216,8 +201,6 @@ class CallManager {
                 otherParticipant.callId = null;
             }
         }
-        
-        console.log(`📞 Call ${callId}: User ${userId} disconnected`);
     }
     
     getCall(callId) {
