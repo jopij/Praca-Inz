@@ -29,7 +29,8 @@ class SignalingServer {
                 isInCall: false,
                 callId: null,
                 videoEnabled: false,
-                audioEnabled: false
+                audioEnabled: false,
+                pendingCallData: null
             };
             
             this.clients.set(ws, clientData);
@@ -140,8 +141,10 @@ class SignalingServer {
                     break;
                     
                 default:
+                    console.log('Unknown message type:', data.type);
             }
         } catch (error) {
+            console.error('Error handling message:', error);
             this.sendError(ws, 'Invalid message format');
         }
     }
@@ -270,15 +273,24 @@ class SignalingServer {
     
     sendToClient(ws, data) {
         if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(data));
+            try {
+                ws.send(JSON.stringify(data));
+            } catch (error) {
+                console.error('Error sending to client:', error);
+            }
         }
     }
     
     sendToClientById(clientId, data) {
         for (const [ws, clientData] of this.clients.entries()) {
             if (clientData.id === clientId && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(data));
-                return true;
+                try {
+                    ws.send(JSON.stringify(data));
+                    return true;
+                } catch (error) {
+                    console.error('Error sending to client by ID:', error);
+                    return false;
+                }
             }
         }
         return false;
@@ -297,7 +309,11 @@ class SignalingServer {
         const message = JSON.stringify(data);
         this.clients.forEach((clientData, ws) => {
             if (ws !== excludeWs && ws.readyState === WebSocket.OPEN) {
-                ws.send(message);
+                try {
+                    ws.send(message);
+                } catch (error) {
+                    console.error('Error broadcasting:', error);
+                }
             }
         });
     }

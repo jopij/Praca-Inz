@@ -236,11 +236,23 @@ class App {
     }
     
     acceptCall(callData) {
-        this.sendWebSocketMessage('accept-call', {
-            callId: callData.callId
+    this.sendWebSocketMessage('accept-call', {
+        callId: callData.callId
+    });
+    this.webrtc.acceptCall(callData);
+
+    if (!this.webrtc.localStream) {
+        this.webrtc.startMedia().then(success => {
+            if (success) {
+                this.sendWebSocketMessage('start-call', {
+                    target: this.webrtc.currentPeerId,
+                    videoEnabled: this.webrtc.isVideoEnabled,
+                    audioEnabled: this.webrtc.isAudioEnabled
+                });
+            }
         });
-        this.webrtc.acceptCall(callData);
     }
+}
     
     rejectCall(callData) {
         this.sendWebSocketMessage('reject-call', {

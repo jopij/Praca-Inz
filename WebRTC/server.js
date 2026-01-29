@@ -6,11 +6,9 @@ const path = require('path');
 
 const app = express();
 
-// Middleware
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 
-// Disable cache for development
 app.use((req, res, next) => {
     res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.header('Pragma', 'no-cache');
@@ -18,7 +16,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Routes
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -31,7 +28,6 @@ app.get('/api/status', (req, res) => {
     });
 });
 
-// Favicon - empty response
 app.get('/favicon.ico', (req, res) => {
     res.status(204).end();
 });
@@ -39,7 +35,6 @@ app.get('/favicon.ico', (req, res) => {
 const PORT = process.env.PORT || 3000;
 let server;
 
-// Check for SSL certificates
 const hasSSL = fs.existsSync('key.pem') && fs.existsSync('cert.pem');
 
 if (hasSSL) {
@@ -53,13 +48,10 @@ if (hasSSL) {
     server = http.createServer(app);
 }
 
-// Import WebSocket server
 const { initializeWebSocket } = require('./src/server/signaling');
 
-// Initialize WebSocket
 const wss = initializeWebSocket(server);
 
-// Start server
 server.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '='.repeat(60));
     if (hasSSL) {
@@ -79,7 +71,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('='.repeat(60));
 });
 
-// Handle graceful shutdown
 process.on('SIGINT', () => {
     console.log('\nShutting down server...');
     server.close(() => {
